@@ -1,0 +1,1182 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NMS — Hệ thống Quản lý Mạng LAN + Camera IP</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Roboto',sans-serif;font-size:14px;background:#eef1f5;color:#212529}
+button{cursor:pointer;font-family:'Roboto',sans-serif}
+input,select,textarea{font-family:'Roboto',sans-serif}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#f1f1f1}
+::-webkit-scrollbar-thumb{background:#b0b8c4;border-radius:3px}
+
+/* ─── VARIABLES ─── */
+:root{
+  --navy:#1e3a5f;--navy2:#162d4a;--navy3:#0d1f35;
+  --gold:#f0a500;--gold2:#d4911f;
+  --bg:#eef1f5;--bg2:#ffffff;--bg3:#f8f9fb;
+  --border:#dee2e6;--border2:#c8cdd6;
+  --text:#212529;--text2:#495057;--text3:#868e96;
+  --blue:#1565c0;--blue2:#0d47a1;
+  --green:#198754;--red:#dc3545;--orange:#fd7e14;--purple:#6f42c1;--cyan:#0891b2;
+  --vlan10:#1565c0;--vlan20:#0891b2;--vlan30:#e67e22;--vlan40:#198754;--vlan99:#868e96;
+  --sidebar:240px;--topbar:54px;--radius:6px;
+}
+
+/* ─── LAYOUT ─── */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:var(--sidebar);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:var(--topbar);background:var(--bg2);border-bottom:2px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;box-shadow:0 1px 4px #0002}
+#content{flex:1;overflow-y:auto;padding:20px}
+
+/* ─── SIDEBAR ─── */
+.sb-header{padding:16px;border-bottom:1px solid #ffffff18}
+.sb-brand{display:flex;align-items:center;gap:10px}
+.sb-logo{width:36px;height:36px;background:var(--gold);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--navy);flex-shrink:0}
+.sb-title{font-size:14px;font-weight:700;color:#fff;line-height:1.2}
+.sb-sub{font-size:10px;color:#ffffff70;margin-top:2px}
+.sb-ws{padding:8px 16px;background:#ffffff08;border-bottom:1px solid #ffffff12;display:flex;align-items:center;gap:8px;font-size:11px;color:#ffffff80}
+.ws-led{width:8px;height:8px;border-radius:50%;background:#868e96;flex-shrink:0}
+.ws-led.on{background:#2ecc71;box-shadow:0 0 6px #2ecc71}
+.ws-led.err{background:#e74c3c}
+nav{padding:10px 8px;flex:1}
+.nav-group{font-size:10px;font-weight:700;color:#ffffff50;text-transform:uppercase;letter-spacing:.1em;padding:12px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);cursor:pointer;color:#ffffffb0;font-size:13px;font-weight:500;transition:all .15s;user-select:none;margin-bottom:1px}
+.nav-item:hover{background:#ffffff18;color:#fff}
+.nav-item.active{background:var(--gold);color:var(--navy);font-weight:700}
+.nav-item.active .nav-icon{color:var(--navy)}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:#e74c3c;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;line-height:1.5}
+.sb-footer{padding:12px 16px;border-top:1px solid #ffffff18;font-size:10px;color:#ffffff50;text-align:center}
+
+/* ─── TOPBAR ─── */
+.tb-title{font-size:16px;font-weight:700;color:var(--text);flex:1}
+.tb-pill{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:4px 14px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.tb-pill strong{color:var(--text);font-weight:700}
+.tb-time{font-size:12px;color:var(--text3);font-family:'Roboto Mono',monospace}
+
+/* ─── CARDS ─── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;border-top:3px solid var(--blue)}
+.stat-card.green{border-top-color:var(--green)}
+.stat-card.red{border-top-color:var(--red)}
+.stat-card.orange{border-top-color:var(--orange)}
+.stat-card.cyan{border-top-color:var(--cyan)}
+.stat-card.purple{border-top-color:var(--purple)}
+.stat-val{font-size:28px;font-weight:700;line-height:1;color:var(--text)}
+.stat-lbl{font-size:12px;color:var(--text3);margin-top:3px}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:4px}
+
+/* ─── PANEL ─── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden}
+.panel-head{padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.panel-head h3{font-size:13px;font-weight:700;color:var(--text);flex:1;text-transform:uppercase;letter-spacing:.04em}
+.panel-body{padding:16px}
+.panel-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* ─── TABLE ─── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--navy);color:#fff;padding:9px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+thead th:first-child{border-radius:0}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:nth-child(even){background:var(--bg3)}
+tbody tr:hover{background:#e8edf5}
+td{padding:9px 14px;font-size:13px;vertical-align:middle}
+.tbl-wrap table{border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden}
+
+/* ─── BADGE ─── */
+.badge{display:inline-block;padding:2px 9px;border-radius:3px;font-size:11px;font-weight:700;border:1px solid}
+.badge-green{background:#d4edda;color:#155724;border-color:#c3e6cb}
+.badge-red{background:#f8d7da;color:#721c24;border-color:#f5c6cb}
+.badge-blue{background:#d1ecf1;color:#0c5460;border-color:#bee5eb}
+.badge-orange{background:#fff3cd;color:#856404;border-color:#ffeeba}
+.badge-purple{background:#e2d9f3;color:#432874;border-color:#d1bff0}
+.badge-gray{background:#e2e3e5;color:#383d41;border-color:#d6d8db}
+.badge-navy{background:#cce5ff;color:#004085;border-color:#b8daff}
+.badge-cyan{background:#cff4fc;color:#055160;border-color:#b6effb}
+
+/* ─── BTNS ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;border:1px solid var(--border2);background:var(--bg2);color:var(--text);transition:all .12s;line-height:1}
+.btn:hover{background:var(--bg3);border-color:var(--text3)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.btn-success{background:var(--green);border-color:var(--green);color:#fff}
+.btn-success:hover{background:#146c43;border-color:#146c43;color:#fff}
+.btn-danger{background:#fde8e8;border-color:#f5c6cb;color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-gold{background:var(--gold);border-color:var(--gold2);color:var(--navy)}
+.btn-gold:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+
+/* ─── SECTION HEADER ─── */
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec-head h3{font-size:14px;font-weight:700;color:var(--text);flex:1}
+
+/* ─── FORM ─── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.form-group input,.form-group select,.form-group textarea{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:13px;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
+
+/* ─── MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:#00000060;display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:var(--radius);box-shadow:0 8px 32px #0004;min-width:420px;max-width:560px;width:90%;overflow:hidden}
+.modal-head{background:var(--navy);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:14px;font-weight:700}
+.modal-close{background:none;border:none;color:#ffffffa0;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.modal-close:hover{color:#fff}
+.modal-body{padding:20px}
+.modal-foot{padding:12px 20px;background:var(--bg3);border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ─── CAMERAS ─── */
+.cam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.cam-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 4px #0001}
+.cam-feed{background:#0a0e14;aspect-ratio:16/9;position:relative;overflow:hidden}
+.cam-canvas{position:absolute;inset:0;width:100%;height:100%}
+.cam-overlay{position:absolute;inset:0;pointer-events:none}
+.cam-hud{position:absolute;top:5px;left:6px;font-size:9px;font-family:'Roboto Mono',monospace;color:#ffffffe0;background:#00000090;padding:2px 7px;border-radius:3px;z-index:2;line-height:1.6}
+.cam-rec{position:absolute;top:7px;right:8px;width:8px;height:8px;border-radius:50%;background:#e74c3c;box-shadow:0 0 6px #e74c3c;z-index:2}
+.stream-badge{position:absolute;bottom:6px;right:6px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;z-index:2;text-transform:uppercase;letter-spacing:.06em}
+.stream-badge.live{background:#e74c3c;color:#fff}
+.stream-badge.video{background:#198754;color:#fff}
+.stream-badge.demo{background:#0891b2;color:#fff}
+.cam-info{padding:8px 12px;border-bottom:1px solid var(--border)}
+.cam-name{font-size:13px;font-weight:700;color:var(--text)}
+.cam-detail{font-size:11px;color:var(--text3);margin-top:2px}
+.cam-actions{padding:7px 12px;display:flex;align-items:center;gap:6px}
+
+/* ─── EVENTS ─── */
+.event-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.event-item:last-child{border-bottom:none}
+.event-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.event-dot.info{background:var(--blue)}
+.event-dot.warning{background:var(--orange)}
+.event-dot.error,.event-dot.deny{background:var(--red)}
+.event-dot.pass{background:var(--green)}
+.event-time{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;min-width:90px;flex-shrink:0}
+.event-msg{font-size:13px;flex:1}
+.event-rule{font-size:11px;color:var(--text3);font-family:'Roboto Mono',monospace;margin-top:2px}
+
+/* ─── CONFIG PRE ─── */
+.cfg-pre{background:#0d1117;border:1px solid #30363d;border-radius:var(--radius);padding:14px 16px;font-family:'Roboto Mono',monospace;font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre;color:#c9d1d9;max-height:58vh;overflow-y:auto}
+.ck{color:#ff7b72}.cv{color:#a5d6ff}.cc{color:#6e7681}.cs{color:#a8daab}
+
+/* ─── PING BOX ─── */
+.ping-box{background:#0d1117;border:1px solid #30363d;border-radius:var(--radius);padding:10px 14px;font-family:'Roboto Mono',monospace;font-size:12px;margin-top:10px;display:none}
+
+/* ─── ACL RESULT ─── */
+.acl-result{display:none;margin-top:12px;padding:12px 16px;border-radius:var(--radius);border:2px solid}
+.acl-result.show{display:block}
+.acl-result.permit{border-color:var(--green);background:#d4edda}
+.acl-result.deny{border-color:var(--red);background:#f8d7da}
+
+/* ─── TOAST ─── */
+#toast-c{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--radius);padding:10px 16px;font-size:13px;box-shadow:0 4px 12px #0002;animation:tin .2s ease;max-width:320px}
+.toast.success{border-left-color:var(--green)}
+.toast.error{border-left-color:var(--red)}
+@keyframes tin{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+
+/* ─── TAB ─── */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ─── STREAM TABS ─── */
+.stab{display:flex;border-bottom:2px solid var(--border);margin-bottom:14px}
+.stab-btn{padding:8px 14px;font-size:12px;font-weight:700;color:var(--text3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .12s;text-transform:uppercase;letter-spacing:.04em}
+.stab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.stab-panel{display:none}
+.stab-panel.active{display:block}
+
+/* ─── REPORT ROWS ─── */
+.rep-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.rep-row:last-child{border-bottom:none}
+.rep-key{font-size:13px;color:var(--text2)}
+.rep-val{font-size:13px;font-weight:700;color:var(--text)}
+
+/* ─── TOPOLOGY ─── */
+.topo-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px;overflow-x:auto}
+#topo-svg{display:block;min-width:760px}
+
+@media(max-width:700px){
+  #sidebar{width:52px}
+  .sb-title,.sb-sub,.nav-item span,.nav-group,.sb-ws span,.sb-footer{display:none}
+  .sb-header{padding:10px}
+  .nav-item{justify-content:center;padding:10px 0}
+  .panel-2col{grid-template-columns:1fr}
+  #content{padding:12px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ─── SIDEBAR ─── -->
+<div id="sidebar">
+  <div class="sb-header">
+    <div class="sb-brand">
+      <div class="sb-logo">NMS</div>
+      <div>
+        <div class="sb-title">NetManage Pro</div>
+        <div class="sb-sub">ĐH Phương Đông · 2024</div>
+      </div>
+    </div>
+  </div>
+  <div class="sb-ws">
+    <div class="ws-led" id="wsDot"></div>
+    <span id="wsStatus">Đang kết nối…</span>
+  </div>
+  <nav>
+    <div class="nav-group">Tổng quan</div>
+    <div class="nav-item active" data-tab="dashboard"><span class="nav-icon">◈</span><span>Dashboard</span></div>
+    <div class="nav-item" data-tab="topology"><span class="nav-icon">⬡</span><span>Sơ đồ mạng</span></div>
+    <div class="nav-group">Hạ tầng mạng</div>
+    <div class="nav-item" data-tab="devices"><span class="nav-icon">▣</span><span>Thiết bị</span></div>
+    <div class="nav-item" data-tab="vlans"><span class="nav-icon">◫</span><span>VLAN</span></div>
+    <div class="nav-group">Giám sát Camera</div>
+    <div class="nav-item" data-tab="cameras"><span class="nav-icon">◉</span><span>Camera IP</span></div>
+    <div class="nav-item" data-tab="events"><span class="nav-icon">◆</span><span>Nhật ký</span><span class="nav-badge" id="alertBadge" style="display:none">0</span></div>
+    <div class="nav-group">Bảo mật</div>
+    <div class="nav-item" data-tab="acl"><span class="nav-icon">◈</span><span>ACL / Firewall</span></div>
+    <div class="nav-item" data-tab="config"><span class="nav-icon">≡</span><span>Cấu hình IOS</span></div>
+    <div class="nav-group">Báo cáo</div>
+    <div class="nav-item" data-tab="reports"><span class="nav-icon">▦</span><span>Báo cáo</span></div>
+    <div class="nav-item" data-tab="tests"><span class="nav-icon">✔</span><span>Kiểm thử</span></div>
+  </nav>
+  <div class="sb-footer">v1.0.0 · LAN + Camera IP System</div>
+</div>
+
+<!-- ─── MAIN ─── -->
+<div id="main">
+  <div id="topbar">
+    <div class="tb-title" id="pageTitle">Dashboard</div>
+    <div class="tb-pill">Camera: <strong id="tbCam">—</strong></div>
+    <div class="tb-pill">Thiết bị: <strong id="tbDev">—</strong></div>
+    <div class="tb-pill">BW: <strong id="tbBw">—</strong> Mbps</div>
+    <div class="tb-time" id="tbTime">—</div>
+  </div>
+  <div id="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="tab-panel active" id="tab-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card blue"><div class="stat-val" id="s-dev">—</div><div class="stat-lbl">Thiết bị mạng</div><div class="stat-sub" id="s-dev2">—</div></div>
+        <div class="stat-card cyan"><div class="stat-val" id="s-cam">—</div><div class="stat-lbl">Camera IP online</div><div class="stat-sub">VLAN 20</div></div>
+        <div class="stat-card orange"><div class="stat-val" id="s-alert">—</div><div class="stat-lbl">Cảnh báo</div><div class="stat-sub" id="s-evts">—</div></div>
+        <div class="stat-card green"><div class="stat-val" id="s-test">—</div><div class="stat-lbl">Test Cases Pass</div><div class="stat-sub" id="s-test2">—</div></div>
+        <div class="stat-card red"><div class="stat-val" id="s-block">—</div><div class="stat-lbl">ACL Blocked</div><div class="stat-sub">packets deny</div></div>
+        <div class="stat-card purple"><div class="stat-val" id="s-bw">35</div><div class="stat-lbl">Camera BW (Mbps)</div><div class="stat-sub">7 × 5 Mbps</div></div>
+      </div>
+      <div class="panel-2col">
+        <div class="panel">
+          <div class="panel-head"><h3>Trạng thái thiết bị</h3></div>
+          <div class="panel-body" style="height:200px"><canvas id="chartDev"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Phân bổ băng thông (Mbps)</h3></div>
+          <div class="panel-body" style="height:200px"><canvas id="chartBw"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Sự kiện gần đây</h3><a href="#" onclick="nav('events')" style="font-size:12px;color:var(--blue)">Xem tất cả →</a></div>
+        <div class="panel-body" id="dashEvents"></div>
+      </div>
+    </div>
+
+    <!-- ══ TOPOLOGY ══ -->
+    <div class="tab-panel" id="tab-topology">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sơ đồ hệ thống mạng LAN + Camera IP</h3>
+          <span style="font-size:11px;color:var(--text3)">Mô hình 3 tầng · IEEE 802.1Q VLAN Trunking</span>
+        </div>
+        <div class="panel-body" style="padding:12px">
+          <div class="topo-wrap">
+            <svg id="topo-svg" viewBox="0 0 960 610" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:960px">
+              <defs>
+                <marker id="arr-b" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5z" fill="#1565c0"/></marker>
+                <marker id="arr-c" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5z" fill="#0891b2"/></marker>
+                <marker id="arr-g" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5z" fill="#198754"/></marker>
+                <marker id="arr-o" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5z" fill="#e67e22"/></marker>
+                <marker id="arr-n" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L0,7 L7,3.5z" fill="#1e3a5f"/></marker>
+              </defs>
+
+              <!-- ── Internet ── -->
+              <ellipse cx="480" cy="46" rx="100" ry="30" fill="#e3f2fd" stroke="#1565c0" stroke-width="2" stroke-dasharray="6,3"/>
+              <text x="480" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#1565c0">☁  INTERNET / ISP</text>
+              <text x="480" y="57" text-anchor="middle" font-size="10" fill="#1565c0">203.0.113.1/30</text>
+
+              <!-- ── WAN link ── -->
+              <line x1="480" y1="76" x2="480" y2="112" stroke="#1565c0" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr-n)"/>
+              <rect x="455" y="83" width="50" height="15" fill="#fff" rx="3"/>
+              <text x="480" y="94" text-anchor="middle" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">WAN</text>
+
+              <!-- ── ROUTER-FW ── -->
+              <rect x="370" y="112" width="220" height="50" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="2"/>
+              <rect x="370" y="112" width="8" height="50" rx="3" fill="#e67e22"/>
+              <text x="388" y="133" font-size="13" font-weight="700" fill="#1e3a5f">ROUTER-FW</text>
+              <text x="388" y="148" font-size="10" fill="#495057">Cisco ISR 4221</text>
+              <text x="555" y="133" text-anchor="end" font-size="10" fill="#868e96" font-family="Roboto Mono,monospace">203.0.113.2/30</text>
+              <text x="555" y="148" text-anchor="end" font-size="9" fill="#e67e22">IPSec VPN · NAT · ACL</text>
+
+              <!-- ── Uplink Router→Core ── -->
+              <line x1="480" y1="162" x2="480" y2="198" stroke="#1e3a5f" stroke-width="2.5" marker-end="url(#arr-n)"/>
+              <rect x="450" y="170" width="60" height="14" fill="#fff" rx="3"/>
+              <text x="480" y="181" text-anchor="middle" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">10.0.0.0/30</text>
+
+              <!-- ── SW-CORE (L3) ── -->
+              <rect x="340" y="198" width="280" height="52" rx="6" fill="#e8f5e9" stroke="#198754" stroke-width="2"/>
+              <rect x="340" y="198" width="8" height="52" rx="3" fill="#198754"/>
+              <text x="358" y="220" font-size="13" font-weight="700" fill="#1e3a5f">SW-CORE  (L3 Routing)</text>
+              <text x="358" y="236" font-size="10" fill="#495057">Cisco Catalyst 3650-24PS  ·  DHCP Server</text>
+              <text x="610" y="220" text-anchor="end" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">10.0.0.1/30</text>
+              <text x="610" y="235" text-anchor="end" font-size="9" fill="#198754">STP Root · Inter-VLAN GW</text>
+
+              <!-- ── Trunk left: Core → SW-DATA ── -->
+              <line x1="380" y1="250" x2="230" y2="310" stroke="#1565c0" stroke-width="2" marker-end="url(#arr-b)"/>
+              <rect x="265" y="268" width="90" height="26" fill="#fff" rx="3" stroke="#dee2e6"/>
+              <text x="310" y="279" text-anchor="middle" font-size="9" font-weight="700" fill="#1565c0">802.1Q Trunk</text>
+              <text x="310" y="290" text-anchor="middle" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">VLAN 10,30,40,99</text>
+
+              <!-- ── Trunk right: Core → SW-CAM ── -->
+              <line x1="580" y1="250" x2="730" y2="310" stroke="#0891b2" stroke-width="2" marker-end="url(#arr-c)"/>
+              <rect x="615" y="268" width="90" height="26" fill="#fff" rx="3" stroke="#dee2e6"/>
+              <text x="660" y="279" text-anchor="middle" font-size="9" font-weight="700" fill="#0891b2">802.1Q Trunk</text>
+              <text x="660" y="290" text-anchor="middle" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">VLAN 20,30,99</text>
+
+              <!-- ── SW-ACCESS-DATA ── -->
+              <rect x="100" y="310" width="260" height="52" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+              <rect x="100" y="310" width="8" height="52" rx="3" fill="#1565c0"/>
+              <text x="118" y="332" font-size="13" font-weight="700" fill="#1e3a5f">SW-ACCESS-DATA</text>
+              <text x="118" y="348" font-size="10" fill="#495057">Cisco 2960X-24PD  ·  192.168.30.11</text>
+              <text x="352" y="332" text-anchor="end" font-size="9" fill="#1565c0">24× Fa0/1-20 = VLAN 10</text>
+              <text x="352" y="347" text-anchor="end" font-size="9" fill="#198754">Fa0/21 = VLAN 40 (Guest)</text>
+
+              <!-- ── SW-ACCESS-CAM ── -->
+              <rect x="600" y="310" width="260" height="52" rx="6" fill="#e0f7fa" stroke="#0891b2" stroke-width="2"/>
+              <rect x="600" y="310" width="8" height="52" rx="3" fill="#0891b2"/>
+              <text x="618" y="332" font-size="13" font-weight="700" fill="#1e3a5f">SW-ACCESS-CAM</text>
+              <text x="618" y="348" font-size="10" fill="#495057">Cisco 2960X-24PD PoE  ·  192.168.30.12</text>
+              <text x="852" y="332" text-anchor="end" font-size="9" fill="#0891b2">7× Fa0/1-7 PoE 7W/port</text>
+              <text x="852" y="347" text-anchor="end" font-size="9" fill="#0891b2">VLAN 20 · 49W total</text>
+
+              <!-- ── PCs (VLAN 10) ── -->
+              <line x1="160" y1="362" x2="120" y2="420" stroke="#1565c0" stroke-width="1.5" marker-end="url(#arr-b)"/>
+              <rect x="60" y="420" width="120" height="44" rx="5" fill="#fff" stroke="#1565c0" stroke-width="1.5"/>
+              <text x="120" y="438" text-anchor="middle" font-size="12">💻 × 20</text>
+              <text x="120" y="452" text-anchor="middle" font-size="10" font-weight="700" fill="#1565c0">VLAN 10 DATA</text>
+              <text x="120" y="462" text-anchor="middle" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">192.168.10.100-200</text>
+
+              <!-- ── Guest WiFi AP (VLAN 40) ── -->
+              <line x1="260" y1="362" x2="280" y2="420" stroke="#198754" stroke-width="1.5" marker-end="url(#arr-g)"/>
+              <rect x="220" y="420" width="120" height="44" rx="5" fill="#fff" stroke="#198754" stroke-width="1.5"/>
+              <text x="280" y="438" text-anchor="middle" font-size="12">📶 WiFi AP</text>
+              <text x="280" y="452" text-anchor="middle" font-size="10" font-weight="700" fill="#198754">VLAN 40 GUEST</text>
+              <text x="280" y="462" text-anchor="middle" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">192.168.40.0/24</text>
+
+              <!-- ── Cameras (VLAN 20) ── -->
+              <line x1="730" y1="362" x2="730" y2="420" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arr-c)"/>
+
+              <!-- Camera icons row -->
+              <g id="cams">
+                <rect x="600" y="420" width="260" height="50" rx="5" fill="#fff" stroke="#0891b2" stroke-width="1.5"/>
+                <text x="624" y="438" font-size="10" font-weight="700" fill="#0891b2">VLAN 20 CAMERA</text>
+                <!-- 7 cam dots -->
+                <circle cx="618" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="636" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="654" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="672" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="690" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="708" cy="456" r="6" fill="#e74c3c"/>
+                <circle cx="726" cy="456" r="6" fill="#e74c3c"/>
+                <text x="745" y="460" font-size="10" fill="#495057">× 7 cams</text>
+                <text x="856" y="453" text-anchor="end" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">192.168.20.11-17</text>
+              </g>
+
+              <!-- ── NVR ── -->
+              <line x1="840" y1="362" x2="880" y2="420" stroke="#6f42c1" stroke-width="1.5" marker-end="url(#arr-n)"/>
+              <rect x="835" y="420" width="110" height="44" rx="5" fill="#fff" stroke="#6f42c1" stroke-width="1.5"/>
+              <text x="890" y="436" text-anchor="middle" font-size="11" font-weight="700" fill="#6f42c1">NVR DS-7608</text>
+              <text x="890" y="450" text-anchor="middle" font-size="9" fill="#495057">192.168.20.10</text>
+              <text x="890" y="462" text-anchor="middle" font-size="8.5" fill="#868e96">RAID-1 · 2×4TB</text>
+
+              <!-- ── VPN remote ── -->
+              <rect x="20" y="120" width="100" height="44" rx="5" fill="#f3e8ff" stroke="#6f42c1" stroke-width="1.5"/>
+              <text x="70" y="136" text-anchor="middle" font-size="10" font-weight="700" fill="#6f42c1">VPN Remote</text>
+              <text x="70" y="150" text-anchor="middle" font-size="9" fill="#495057">IPSec AES-256</text>
+              <text x="70" y="162" text-anchor="middle" font-size="8.5" fill="#868e96" font-family="Roboto Mono,monospace">10.10.10.0/24</text>
+              <line x1="120" y1="142" x2="370" y2="135" stroke="#6f42c1" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-n)"/>
+
+              <!-- ── VLAN Legend ── -->
+              <rect x="20" y="540" width="920" height="55" rx="5" fill="#f8f9fb" stroke="#dee2e6"/>
+              <text x="36" y="557" font-size="10" font-weight="700" fill="#495057">LEGEND:</text>
+              <rect x="95" y="547" width="14" height="10" rx="2" fill="#1565c0"/><text x="113" y="557" font-size="10" fill="#1565c0" font-weight="700">VLAN 10 DATA</text>
+              <text x="113" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">192.168.10.0/24  DHCP→.100-200</text>
+              <rect x="230" y="547" width="14" height="10" rx="2" fill="#0891b2"/><text x="248" y="557" font-size="10" fill="#0891b2" font-weight="700">VLAN 20 CAMERA</text>
+              <text x="248" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">192.168.20.0/24  Static IP</text>
+              <rect x="380" y="547" width="14" height="10" rx="2" fill="#e67e22"/><text x="398" y="557" font-size="10" fill="#e67e22" font-weight="700">VLAN 30 MGMT</text>
+              <text x="398" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">192.168.30.0/24  SSH Only</text>
+              <rect x="510" y="547" width="14" height="10" rx="2" fill="#198754"/><text x="528" y="557" font-size="10" fill="#198754" font-weight="700">VLAN 40 GUEST</text>
+              <text x="528" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">192.168.40.0/24  DHCP→.100-200</text>
+              <rect x="645" y="547" width="14" height="10" rx="2" fill="#6f42c1"/><text x="663" y="557" font-size="10" fill="#6f42c1" font-weight="700">VPN Pool</text>
+              <text x="663" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">10.10.10.0/24  IPSec IKEv1</text>
+              <rect x="750" y="547" width="14" height="10" rx="2" fill="#868e96"/><text x="768" y="557" font-size="10" fill="#868e96" font-weight="700">VLAN 99 NATIVE</text>
+              <text x="768" y="568" font-size="9" fill="#868e96" font-family="Roboto Mono,monospace">Trunk Native · Untagged</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div id="topoCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:14px"></div>
+    </div>
+
+    <!-- ══ DEVICES ══ -->
+    <div class="tab-panel" id="tab-devices">
+      <div class="sec-head">
+        <h3>Danh sách thiết bị mạng</h3>
+        <button class="btn btn-primary btn-sm" onclick="openAddDevice()">+ Thêm thiết bị</button>
+      </div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Tên</th><th>Loại</th><th>Model</th><th>IP quản lý</th><th>VLAN</th><th>Vị trí</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+              <tbody id="devBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="pingResult" class="ping-box"></div>
+    </div>
+
+    <!-- ══ VLANs ══ -->
+    <div class="tab-panel" id="tab-vlans">
+      <div class="sec-head"><h3>Cấu hình VLAN</h3></div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>VLAN ID</th><th>Tên</th><th>Subnet</th><th>Default Gateway</th><th>DHCP Range</th><th>Mô tả</th></tr></thead>
+              <tbody id="vlanBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CAMERAS ══ -->
+    <div class="tab-panel" id="tab-cameras">
+      <div class="sec-head">
+        <h3>Camera IP — VLAN 20 (Hikvision DS-2CD2143G2-I)</h3>
+        <button class="btn btn-sm" onclick="openAddCam()">+ Thêm camera</button>
+      </div>
+      <div class="cam-grid" id="camGrid"></div>
+    </div>
+
+    <!-- ══ EVENTS ══ -->
+    <div class="tab-panel" id="tab-events">
+      <div class="sec-head">
+        <h3>Nhật ký sự kiện hệ thống</h3>
+        <select id="evtFilter" onchange="loadEvents()" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;font-size:12px">
+          <option value="">Tất cả mức độ</option>
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="error">Error</option>
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="clearEvents()">Xóa log</button>
+      </div>
+      <div class="panel"><div class="panel-body" id="evtList"></div></div>
+    </div>
+
+    <!-- ══ ACL ══ -->
+    <div class="tab-panel" id="tab-acl">
+      <div class="sec-head"><h3>Danh sách kiểm soát truy cập (ACL)</h3></div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Seq</th><th>ACL List</th><th>Action</th><th>Protocol</th><th>Nguồn</th><th>Đích</th><th>Mô tả</th></tr></thead>
+              <tbody id="aclBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Mô phỏng ACL Lookup</h3></div>
+        <div class="panel-body">
+          <div class="form-grid" style="max-width:500px">
+            <div class="form-group"><label>IP Nguồn</label><input id="aclSrc" value="192.168.10.100" placeholder="192.168.10.100"></div>
+            <div class="form-group"><label>IP Đích</label><input id="aclDst" value="192.168.20.10" placeholder="192.168.20.10"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="simACL()">▶ Kiểm tra ACL</button>
+          <div id="aclResult" class="acl-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CONFIG ══ -->
+    <div class="tab-panel" id="tab-config">
+      <div class="sec-head">
+        <h3>Cisco IOS Running Configuration</h3>
+        <select id="cfgDevice" onchange="loadConfig()" style="border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:13px">
+          <option value="SW-CORE">SW-CORE (L3 Core Switch)</option>
+          <option value="SW-ACCESS-DATA">SW-ACCESS-DATA (L2 Access)</option>
+          <option value="SW-ACCESS-CAM">SW-ACCESS-CAM (L2 PoE)</option>
+          <option value="ROUTER-FW">ROUTER-FW (ISR 4221)</option>
+        </select>
+        <button class="btn btn-sm" onclick="copyConfig()">Copy</button>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3 id="cfgLabel">—</h3></div>
+        <div class="panel-body" style="padding:8px"><pre class="cfg-pre" id="cfgPre"></pre></div>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div class="tab-panel" id="tab-reports">
+      <div class="sec-head"><h3>Báo cáo kỹ thuật hệ thống</h3></div>
+      <div class="panel-2col">
+        <div class="panel">
+          <div class="panel-head"><h3>Tính toán băng thông</h3></div>
+          <div class="panel-body" id="bwReport"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Tính toán lưu trữ</h3></div>
+          <div class="panel-body" id="stReport"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>DHCP Lease Table</h3></div>
+        <div class="panel-body" style="padding:0">
+          <div class="tbl-wrap">
+            <table><thead><tr><th>IP</th><th>MAC Address</th><th>Hostname</th><th>VLAN</th></tr></thead>
+            <tbody id="dhcpBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TESTS ══ -->
+    <div class="tab-panel" id="tab-tests">
+      <div class="sec-head">
+        <h3>Kịch bản kiểm thử hệ thống</h3>
+        <button class="btn btn-success btn-sm" onclick="runAllTests()">▶ Chạy tất cả (TC-01 → TC-12)</button>
+      </div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Mã</th><th>Tên kiểm thử</th><th>Phân loại</th><th>Kết quả mong đợi</th><th>Trạng thái</th><th>Kết quả thực tế</th><th></th></tr></thead>
+              <tbody id="testBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── MODAL: Device ── -->
+<div class="modal-overlay" id="modalDevice">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalDevTitle">Thêm thiết bị</h3><button class="modal-close" onclick="closeModal('modalDevice')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Tên *</label><input id="dName" placeholder="VD: SW-EDGE"></div>
+        <div class="form-group"><label>Loại *</label>
+          <select id="dType"><option value="router">Router</option><option value="switch-l3">Switch L3</option><option value="switch-l2">Switch L2</option><option value="nvr">NVR</option><option value="server">Server</option><option value="ap">Access Point</option></select>
+        </div>
+        <div class="form-group"><label>Model</label><input id="dModel" placeholder="VD: Cisco 2960X"></div>
+        <div class="form-group"><label>Địa chỉ IP</label><input id="dIp" placeholder="192.168.30.x"></div>
+        <div class="form-group"><label>VLAN</label><input id="dVlan" type="number" placeholder="30"></div>
+        <div class="form-group"><label>Vị trí</label><input id="dLoc" placeholder="Phòng máy chủ"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modalDevice')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveDevice()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Camera ── -->
+<div class="modal-overlay" id="modalCam">
+  <div class="modal">
+    <div class="modal-head"><h3>Thêm Camera IP</h3><button class="modal-close" onclick="closeModal('modalCam')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Tên *</label><input id="cName" placeholder="CAM-08"></div>
+        <div class="form-group"><label>IP *</label><input id="cIp" placeholder="192.168.20.18"></div>
+        <div class="form-group form-full"><label>Vị trí</label><input id="cLoc" placeholder="Hành lang tầng 2"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modalCam')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveCam()">Thêm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Stream ── -->
+<div class="modal-overlay" id="modalStream">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><h3 id="streamTitle">Cấu hình nguồn video</h3><button class="modal-close" onclick="closeModal('modalStream')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="streamCamId">
+      <div class="stab">
+        <button class="stab-btn active" id="stab-rtsp" onclick="switchSTab('rtsp')">Camera thật (RTSP)</button>
+        <button class="stab-btn" id="stab-video" onclick="switchSTab('video')">Video file (.mp4)</button>
+        <button class="stab-btn" id="stab-demo" onclick="switchSTab('demo')">Animation demo</button>
+      </div>
+      <div class="stab-panel active" id="sp-rtsp">
+        <div class="form-group" style="margin-bottom:10px">
+          <label>RTSP URL</label>
+          <input id="rtspUrl" placeholder="rtsp://admin:password@192.168.20.11:554/Streaming/Channels/101">
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.6">Hikvision: <code>rtsp://admin:&lt;pass&gt;@&lt;ip&gt;:554/Streaming/Channels/101</code><br>Yêu cầu FFmpeg trong PATH. Backend sẽ transcode RTSP → HLS.</p>
+        <div id="rtspStatus" style="font-size:12px;color:var(--text3);margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="startRtsp()">▶ Bắt đầu stream</button>
+          <button class="btn btn-danger btn-sm" onclick="stopRtsp()">■ Dừng</button>
+        </div>
+      </div>
+      <div class="stab-panel" id="sp-video">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.7">Đặt file vào: <code style="color:var(--blue)">backend/static/videos/</code><br>Đặt tên: <code>cam-1.mp4</code>, <code>cam-2.mp4</code>, …</p>
+        <div id="videoStatus" style="font-size:12px;margin-bottom:10px"></div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Hoặc URL video trực tiếp</label>
+          <input id="videoUrl" placeholder="/static/videos/cam-1.mp4">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setVideoFile()">Áp dụng</button>
+      </div>
+      <div class="stab-panel" id="sp-demo">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Sử dụng canvas animation mô phỏng. Không cần cấu hình thêm.</p>
+        <button class="btn btn-primary btn-sm" onclick="resetToDemo()">Dùng animation demo</button>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('modalStream')">Đóng</button></div>
+  </div>
+</div>
+
+<div id="toast-c"></div>
+
+<script>
+const API='';
+const $ = id=>document.getElementById(id);
+let editDevId=null, bwChart, devChart;
+
+// ── TIME ──
+setInterval(()=>{ $('tbTime').textContent=new Date().toLocaleString('vi'); },1000);
+$('tbTime').textContent=new Date().toLocaleString('vi');
+
+// ── UTILS ──
+function toast(msg,type='info',dur=3000){
+  const c=$('toast-c'),t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>t.remove(),dur);
+}
+async function api(path,opts={}){
+  const r=await fetch(API+path,{headers:{'Content-Type':'application/json'},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
+  if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||r.statusText);}
+  return r.json();
+}
+function vlanClr(v){return({10:'#1565c0',20:'#0891b2',30:'#e67e22',40:'#198754',99:'#868e96'})[v]||'#868e96'}
+function vlanBg(v){return({10:'#d1ecf1',20:'#cff4fc',30:'#fff3cd',40:'#d4edda',99:'#e2e3e5'})[v]||'#e2e3e5'}
+function vlanTxt(v){return({10:'#0c5460',20:'#055160',30:'#856404',40:'#155724',99:'#383d41'})[v]||'#383d41'}
+function statusBadge(s){
+  if(s==='online') return'<span class="badge badge-green">● Online</span>';
+  if(s==='offline') return'<span class="badge badge-red">● Offline</span>';
+  if(s==='pass') return'<span class="badge badge-green">✓ Pass</span>';
+  if(s==='fail') return'<span class="badge badge-red">✗ Fail</span>';
+  if(s==='pending') return'<span class="badge badge-gray">○ Pending</span>';
+  return`<span class="badge badge-gray">${s}</span>`;
+}
+function devIcon(t){return{router:'⬡',['switch-l3']:'⬣',['switch-l2']:'▣',nvr:'▤',server:'▥',ap:'◉'}[t]||'◆'}
+function sev2dot(s){return({warning:'warning',error:'error',deny:'error',pass:'pass'})[s]||'info'}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── NAVIGATION ──
+const TABS={dashboard:'Dashboard',topology:'Sơ đồ mạng',devices:'Thiết bị mạng',vlans:'Cấu hình VLAN',cameras:'Camera IP',events:'Nhật ký sự kiện',acl:'ACL / Firewall',config:'Cấu hình IOS',reports:'Báo cáo',tests:'Kiểm thử'};
+function nav(tab){document.querySelector(`[data-tab="${tab}"]`).click();}
+document.querySelectorAll('.nav-item').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const tab=el.dataset.tab;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    $(`tab-${tab}`).classList.add('active');
+    $('pageTitle').textContent=TABS[tab]||tab;
+    onOpen(tab);
+  });
+});
+
+function onOpen(t){
+  ({dashboard:loadDashboard,topology:loadTopology,devices:loadDevices,vlans:loadVlans,
+    cameras:loadCameras,events:loadEvents,acl:loadACL,config:loadConfig,
+    reports:loadReports,tests:loadTests})[t]?.();
+}
+
+// ── WEBSOCKET ──
+let ws;
+function connectWS(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  ws=new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen=()=>{$('wsDot').className='ws-led on';$('wsStatus').textContent='Đã kết nối';};
+  ws.onclose=()=>{$('wsDot').className='ws-led err';$('wsStatus').textContent='Mất kết nối';setTimeout(connectWS,4000);};
+  ws.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.type==='stats') updateTopStats(m.data);
+    if(m.type==='test_result') updateTestRow(m.data);
+    if(m.type==='ping_result') showPingResult(m.data);
+    if((m.type==='device_added'||m.type==='device_updated'||m.type==='device_deleted')&&activeTab()==='devices') loadDevices();
+    if((m.type==='camera_added'||m.type==='camera_updated'||m.type==='camera_deleted')&&activeTab()==='cameras') loadCameras();
+  };
+}
+function activeTab(){return document.querySelector('.nav-item.active')?.dataset?.tab;}
+function updateTopStats(d){
+  $('tbCam').textContent=`${d.cameras_online}/${d.cameras_total}`;
+  $('tbDev').textContent=`${d.devices_online}/${d.devices_total}`;
+  $('tbBw').textContent=d.cam_bw_mbps||35;
+}
+
+// ── DASHBOARD ──
+async function loadDashboard(){
+  const[stats,evts]=await Promise.all([api('/api/stats'),api('/api/events?limit=8')]);
+  $('s-dev').textContent=`${stats.devices_online}/${stats.devices_total}`;
+  $('s-dev2').textContent=stats.devices_online===stats.devices_total?'Tất cả online':`${stats.devices_total-stats.devices_online} offline`;
+  $('s-cam').textContent=`${stats.cameras_online}/${stats.cameras_total}`;
+  $('s-alert').textContent=stats.alerts;
+  $('s-evts').textContent=`${stats.events_total} sự kiện`;
+  $('s-test').textContent=`${stats.tests_passed}/${stats.tests_total}`;
+  $('s-test2').textContent=`${Math.round(stats.tests_passed/stats.tests_total*100)||0}% pass rate`;
+  $('s-block').textContent=stats.packets_blocked;
+
+  if(devChart) devChart.destroy();
+  devChart=new Chart($('chartDev'),{
+    type:'doughnut',
+    data:{labels:['Online','Offline'],datasets:[{data:[stats.devices_online,stats.devices_total-stats.devices_online],backgroundColor:['#198754','#dc3545'],borderColor:'#fff',borderWidth:2}]},
+    options:{plugins:{legend:{labels:{color:'#495057',font:{family:'Roboto'}}}},cutout:'62%'}
+  });
+  if(bwChart) bwChart.destroy();
+  bwChart=new Chart($('chartBw'),{
+    type:'bar',
+    data:{labels:['Camera\n7×5Mbps','Office\n30×2Mbps','Total','Uplink\nGigabit'],datasets:[{label:'Mbps',data:[35,60,95,1000],backgroundColor:['#cff4fc','#d1ecf1','#fff3cd','#d4edda'],borderColor:['#0891b2','#1565c0','#e67e22','#198754'],borderWidth:2,borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#868e96',font:{family:'Roboto Mono'}},grid:{color:'#dee2e6'}},x:{ticks:{color:'#495057'},grid:{display:false}}}}
+  });
+
+  $('dashEvents').innerHTML=evts.slice(0,8).map(e=>`
+    <div class="event-item">
+      <div class="event-dot ${sev2dot(e.severity)}"></div>
+      <span class="event-time">${(e.timestamp||'').substring(11,19)||'—'}</span>
+      <div>
+        <div class="event-msg">${esc(e.message)}</div>
+        <div class="event-rule">${[e.rule,e.source_ip?'src:'+e.source_ip:''].filter(Boolean).map(esc).join(' · ')}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── TOPOLOGY ──
+async function loadTopology(){
+  const devs=await api('/api/devices');
+  $('topoCards').innerHTML=devs.map(d=>`
+    <div class="panel" style="margin:0">
+      <div class="panel-body" style="padding:10px 12px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">${devIcon(d.type)}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700">${esc(d.name)}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:'Roboto Mono',monospace">${esc(d.ip)||'—'}</div>
+          <div style="font-size:10px;color:var(--text3)">${esc(d.model||d.type)}</div>
+        </div>
+        ${statusBadge(d.status)}
+      </div>
+    </div>`).join('');
+}
+
+// ── DEVICES ──
+async function loadDevices(){
+  const devs=await api('/api/devices');
+  $('devBody').innerHTML=devs.map(d=>`
+    <tr>
+      <td><strong>${devIcon(d.type)} ${esc(d.name)}</strong></td>
+      <td><span class="badge badge-navy">${esc(d.type)}</span></td>
+      <td style="color:var(--text3);font-size:12px">${esc(d.model)||'—'}</td>
+      <td style="font-family:'Roboto Mono',monospace;font-size:12px">${esc(d.ip)||'—'}</td>
+      <td>${d.vlan?`<span class="badge" style="background:${vlanBg(d.vlan)};color:${vlanTxt(d.vlan)};border-color:${vlanClr(d.vlan)}40">VLAN ${d.vlan}</span>`:'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${esc(d.location)||'—'}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-xs" onclick="pingDevice(${d.id},'${d.name}')">Ping</button>
+        <button class="btn btn-xs" onclick="toggleDev(${d.id},'${d.status}')">${d.status==='online'?'Offline':'Online'}</button>
+        <button class="btn btn-xs" onclick="editDevice(${d.id})">Sửa</button>
+        <button class="btn btn-xs btn-danger" onclick="delDevice(${d.id},'${d.name}')">Xóa</button>
+      </td>
+    </tr>`).join('');
+}
+function openAddDevice(){editDevId=null;$('modalDevTitle').textContent='Thêm thiết bị';['dName','dModel','dIp','dVlan','dLoc'].forEach(i=>$(i).value='');$('dType').value='switch-l2';$('modalDevice').classList.add('open');}
+async function editDevice(id){const d=await api(`/api/devices/${id}`);editDevId=id;$('modalDevTitle').textContent='Sửa thiết bị';$('dName').value=d.name;$('dType').value=d.type;$('dModel').value=d.model||'';$('dIp').value=d.ip||'';$('dVlan').value=d.vlan||'';$('dLoc').value=d.location||'';$('modalDevice').classList.add('open');}
+async function saveDevice(){
+  const body={name:$('dName').value.trim(),type:$('dType').value,model:$('dModel').value,ip:$('dIp').value,vlan:$('dVlan').value?+$('dVlan').value:null,location:$('dLoc').value};
+  if(!body.name){toast('Nhập tên thiết bị','error');return;}
+  try{if(editDevId)await api(`/api/devices/${editDevId}`,{method:'PUT',body});else await api('/api/devices',{method:'POST',body});closeModal('modalDevice');toast(editDevId?'Đã cập nhật':'Đã thêm thiết bị','success');loadDevices();}catch(e){toast(e.message,'error');}
+}
+async function delDevice(id,name){if(!confirm(`Xóa "${name}"?`))return;await api(`/api/devices/${id}`,{method:'DELETE'});toast(`Đã xóa ${name}`,'success');loadDevices();}
+async function toggleDev(id,cur){await api(`/api/devices/${id}/status?status=${cur==='online'?'offline':'online'}`,{method:'PUT'});loadDevices();}
+async function pingDevice(id,name){
+  const box=$('pingResult');box.style.display='block';box.style.color='var(--text3)';box.textContent=`Đang ping ${name}…`;
+  const r=await api(`/api/devices/${id}/ping`,{method:'POST'});showPingResult(r);
+}
+function showPingResult(r){
+  const b=$('pingResult');if(!b)return;b.style.display='block';
+  b.style.color=r.reachable?'var(--green)':'var(--red)';
+  b.textContent=r.reachable?`Ping ${r.device} (${r.ip}): Sent=4 Received=4 Loss=0%  RTT=${r.latency_ms}ms  OK ✓`:`Ping ${r.device} (${r.ip}): Sent=4 Received=0 Loss=100%  REQUEST TIMED OUT ✗`;
+}
+
+// ── VLANs ──
+async function loadVlans(){
+  const v=await api('/api/vlans');
+  $('vlanBody').innerHTML=v.map(vl=>`<tr>
+    <td><span class="badge" style="background:${vlanBg(vl.vlan_id)};color:${vlanTxt(vl.vlan_id)};border-color:${vlanClr(vl.vlan_id)}40;font-size:12px">VLAN ${vl.vlan_id}</span></td>
+    <td><strong>${vl.name}</strong></td>
+    <td style="font-family:'Roboto Mono',monospace;font-size:12px">${vl.network||'—'}</td>
+    <td style="font-family:'Roboto Mono',monospace;font-size:12px">${vl.gateway||'—'}</td>
+    <td style="font-size:12px;color:var(--text3)">${vl.dhcp_start?vl.dhcp_start+' → '+vl.dhcp_end:'Static / N/A'}</td>
+    <td style="font-size:12px;color:var(--text2)">${vl.description||'—'}</td>
+  </tr>`).join('');
+}
+
+// ── CAMERAS ──
+const camAnims={},hlsInstances={};
+async function loadCameras(){
+  const cams=await api('/api/cameras');
+  $('camGrid').innerHTML=cams.map((c,i)=>`
+    <div class="cam-card" id="camcard-${c.id}">
+      <div class="cam-feed" id="feed-${c.id}">
+        <canvas class="cam-canvas" id="camcanvas-${c.id}" width="320" height="180"></canvas>
+        <div class="cam-hud">${esc(c.ip)}<br>${esc(c.codec||'H.265+')} · ${esc(c.resolution||'2688×1520')} · ${c.fps||15}fps</div>
+        ${c.status==='online'?'<div class="cam-rec"></div>':''}
+      </div>
+      <div class="cam-info">
+        <div class="cam-name">${esc(c.name)}</div>
+        <div class="cam-detail">📍 ${esc(c.location)||'—'} &nbsp;·&nbsp; PoE ${c.poe_power||7}W &nbsp;·&nbsp; ${esc(c.model||'DS-2CD2143G2-I')}</div>
+      </div>
+      <div class="cam-actions">
+        ${statusBadge(c.status)}
+        <button class="btn btn-xs" onclick="openStreamConfig(${c.id},'${c.name}')" title="Cấu hình nguồn video" style="margin-left:auto">⚙ Nguồn</button>
+        <button class="btn btn-xs" onclick="toggleCam(${c.id},'${c.status}')">${c.status==='online'?'Tắt':'Bật'}</button>
+      </div>
+    </div>`).join('');
+  cams.forEach((c,i)=>{if(c.status==='online') setupCamFeed(c,i);});
+}
+async function setupCamFeed(cam,idx){
+  const feedEl=$(`feed-${cam.id}`);if(!feedEl)return;
+  if(hlsInstances[cam.id]){hlsInstances[cam.id].destroy();delete hlsInstances[cam.id];}
+  if(camAnims[cam.id]){cancelAnimationFrame(camAnims[cam.id]);delete camAnims[cam.id];}
+  feedEl.querySelectorAll('video').forEach(v=>v.remove());
+  if(cam.hls_url){mountVideo(cam.id,cam.hls_url,'live',feedEl,idx);return;}
+  const vSrc=cam.video_file||`/static/videos/cam-${cam.id}.mp4`;
+  try{const h=await fetch(vSrc,{method:'HEAD'});if(h.ok){mountVideo(cam.id,vSrc,'video',feedEl,idx);return;}}catch(_){}
+  mountCanvas(cam.id,idx,feedEl);
+}
+function mountVideo(cid,src,mode,feedEl,idx=0){
+  const cv=$(`camcanvas-${cid}`);if(cv)cv.style.display='none';
+  const vid=document.createElement('video');
+  vid.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1';
+  vid.autoplay=true;vid.muted=true;vid.playsInline=true;
+  vid.onerror=()=>{vid.remove();if(cv)cv.style.display='';mountCanvas(cid,idx,feedEl);};
+  feedEl.appendChild(vid);
+  setBadge(feedEl,mode);
+  if(mode==='live'&&typeof Hls!=='undefined'&&Hls.isSupported()){const h=new Hls({lowLatencyMode:true});h.loadSource(src);h.attachMedia(vid);hlsInstances[cid]=h;vid.loop=false;}
+  else if(mode==='live'&&vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=src;}
+  else{vid.src=src;vid.loop=true;}
+  vid.play().catch(()=>{});
+}
+function mountCanvas(cid,idx,feedEl){
+  const cv=$(`camcanvas-${cid}`);if(!cv)return;cv.style.display='';
+  setBadge(feedEl,'demo');startCamAnim(cid,idx);
+}
+function setBadge(feedEl,mode){
+  let b=feedEl.querySelector('.stream-badge');
+  if(!b){b=document.createElement('div');b.className='stream-badge';feedEl.appendChild(b);}
+  b.className=`stream-badge ${mode}`;
+  b.textContent={live:'● LIVE',video:'▶ VIDEO',demo:'◈ DEMO'}[mode]||mode;
+}
+async function toggleCam(id,cur){
+  const next=cur==='online'?'offline':'online';
+  await api(`/api/cameras/${id}/status?status=${next}`,{method:'PUT'});
+  toast(`Camera ${next}`,'success');loadCameras();
+}
+function openAddCam(){['cName','cIp','cLoc'].forEach(i=>$(i).value='');$('modalCam').classList.add('open');}
+async function saveCam(){
+  const body={name:$('cName').value.trim(),ip:$('cIp').value.trim(),location:$('cLoc').value};
+  if(!body.name||!body.ip){toast('Điền đầy đủ Tên và IP','error');return;}
+  try{await api('/api/cameras',{method:'POST',body});closeModal('modalCam');toast('Đã thêm camera','success');loadCameras();}catch(e){toast(e.message,'error');}
+}
+
+// ── CANVAS ANIMATIONS ──
+function startCamAnim(cid,idx){
+  const cv=$(`camcanvas-${cid}`);if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const scenes=[drawPerson,drawOffice,drawCar,drawServer,drawEntrance,drawParking,drawServer2];
+  const fn=scenes[idx%scenes.length];let f=0;
+  if(camAnims[cid])cancelAnimationFrame(camAnims[cid]);
+  function tick(){fn(ctx,cv.width,cv.height,f++);camAnims[cid]=requestAnimationFrame(tick);}tick();
+}
+function base(ctx,w,h,bg='#0a0e18'){
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='9px Roboto Mono,monospace';
+  ctx.fillText(new Date().toLocaleTimeString('vi'),8,h-7);
+}
+function drawPerson(ctx,w,h,f){
+  base(ctx,w,h,'#0d1320');ctx.fillStyle='#1a2540';ctx.fillRect(0,h*.55,w,h*.45);
+  const px=(f*1.2)%w;
+  ctx.fillStyle='#e0e8f0';ctx.fillRect(px,h*.4,5,18);
+  ctx.beginPath();ctx.arc(px+2.5,h*.38,5,0,Math.PI*2);ctx.fill();
+  const lg=Math.sin(f*.2)*7;ctx.strokeStyle='#e0e8f0';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(px+2.5,h*.56);ctx.lineTo(px+2.5+lg,h*.64);ctx.lineTo(px+2.5-lg,h*.64);ctx.stroke();
+}
+function drawOffice(ctx,w,h,f){
+  base(ctx,w,h,'#0c1a28');ctx.fillStyle='#132030';ctx.fillRect(15,12,w-30,h-24);
+  for(let i=0;i<5;i++){
+    const x=24+i*37,y=22;ctx.fillStyle='#1a3a5f';ctx.fillRect(x,y,30,20);
+    ctx.fillStyle=`hsl(${210+Math.sin(f*.02+i)*15},65%,${38+Math.sin(f*.05+i)*8}%)`;ctx.fillRect(x+2,y+2,26,16);
+  }
+}
+function drawCar(ctx,w,h,f){
+  base(ctx,w,h,'#08090e');ctx.fillStyle='#0f0f14';ctx.fillRect(0,h*.5,w,h*.5);
+  const cx=w-(f*.8)%w;
+  ctx.fillStyle='#1a3060';ctx.fillRect(cx-32,h*.44,64,22);ctx.fillStyle='#4477aa';ctx.fillRect(cx-24,h*.36,48,20);
+  ctx.fillStyle='#222';for(const dx of[-20,20]){ctx.beginPath();ctx.arc(cx+dx,h*.67,7,0,Math.PI*2);ctx.fill();}
+  if(Math.sin(f*.1)>0){ctx.fillStyle='#ffffaa80';ctx.fillRect(cx+26,h*.49,5,5);}
+}
+function drawServer(ctx,w,h,f){
+  base(ctx,w,h,'#060810');
+  for(let i=0;i<5;i++){
+    ctx.fillStyle='#0d1424';ctx.fillRect(20,16+i*38,w-40,30);ctx.fillStyle='#17263a';ctx.fillRect(22,18+i*38,w-44,26);
+    ctx.fillStyle=Math.sin(f*.08+i*1.2)>0?'#00cc66':'#003322';ctx.fillRect(w-50,26+i*38,8,8);
+    ctx.fillStyle='#0066ff';ctx.fillRect(w-38,26+i*38,6,8);
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='9px Roboto Mono,monospace';ctx.fillText(`SERVER-${i+1}`,30,36+i*38);
+  }
+}
+function drawEntrance(ctx,w,h,f){
+  base(ctx,w,h,'#0a0c12');
+  ctx.fillStyle='#161e30';ctx.fillRect(w/2-28,8,56,h-16);ctx.fillStyle='#202d40';ctx.fillRect(w/2-22,14,44,h-28);
+  if(Math.floor(f/12)%2===0){ctx.fillStyle='#ff3333';ctx.beginPath();ctx.arc(w/2,18,5,0,Math.PI*2);ctx.fill();}
+}
+function drawParking(ctx,w,h,f){
+  base(ctx,w,h,'#060810');
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+  for(let i=1;i<7;i++){ctx.beginPath();ctx.moveTo(i*38,h*.18);ctx.lineTo(i*38,h*.85);ctx.stroke();}
+  [[55,h*.3,'#1a3050'],[130,h*.5,'#2a1a50'],[210,h*.38,'#1a4020']].forEach(([x,y,c])=>{
+    ctx.fillStyle=c;ctx.fillRect(x,y,36,18);ctx.fillStyle='#333';
+    for(const dx of[6,30]){ctx.beginPath();ctx.arc(x+dx,y+18,5,0,Math.PI*2);ctx.fill();}
+  });
+}
+function drawServer2(ctx,w,h,f){
+  base(ctx,w,h,'#040610');
+  ctx.fillStyle='#0a1020';ctx.fillRect(15,10,w-30,h-20);
+  for(let i=0;i<3;i++){
+    const y=20+i*55;ctx.fillStyle='#101828';ctx.fillRect(22,y,w-44,45);
+    const pct=50+Math.sin(f*.03+i)* 30;ctx.fillStyle='#003344';ctx.fillRect(26,y+6,w-52,8);ctx.fillStyle='#00aaff';ctx.fillRect(26,y+6,Math.round((w-52)*pct/100),8);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px Roboto Mono,monospace';ctx.fillText(`RACK-${i+1}  CPU: ${Math.round(pct)}%`,26,y+28);
+  }
+}
+
+// ── STREAM CONFIG ──
+async function openStreamConfig(cid,name){
+  $('streamCamId').value=cid;$('streamTitle').textContent=`Nguồn video — ${name}`;
+  $('rtspUrl').value='';$('videoUrl').value='';$('rtspStatus').textContent='';$('videoStatus').textContent='';
+  const[cam,status,vinfo]=await Promise.all([api(`/api/cameras/${cid}`),api(`/api/cameras/${cid}/rtsp/status`),api(`/api/cameras/${cid}/video-info`)]);
+  if(cam.rtsp_url)$('rtspUrl').value=cam.rtsp_url;
+  if(cam.video_file)$('videoUrl').value=cam.video_file;
+  $('rtspStatus').textContent=status.running?`✅ Đang stream (PID ${status.pid})`:(cam.rtsp_url?'⏸ Đã cấu hình, chưa chạy':'');
+  $('videoStatus').innerHTML=vinfo.found?`✅ <strong>${vinfo.filename}</strong> (${vinfo.size_mb} MB)`:`❌ Chưa có file cam-${cid}.mp4`;
+  switchSTab(cam.hls_url?'rtsp':cam.video_file||vinfo.found?'video':'demo');
+  $('modalStream').classList.add('open');
+}
+function switchSTab(t){
+  ['rtsp','video','demo'].forEach(x=>{
+    $(`stab-${x}`).classList.toggle('active',x===t);
+    $(`sp-${x}`).classList.toggle('active',x===t);
+  });
+}
+async function startRtsp(){
+  const cid=+$('streamCamId').value,url=$('rtspUrl').value.trim();
+  if(!url){toast('Nhập RTSP URL','error');return;}
+  $('rtspStatus').textContent='⏳ Đang khởi động FFmpeg…';
+  try{const r=await api(`/api/cameras/${cid}/rtsp/start`,{method:'POST',body:{rtsp_url:url}});
+    $('rtspStatus').textContent='✅ Đang stream → HLS';toast('Stream RTSP bắt đầu','success');setTimeout(loadCameras,3000);}
+  catch(e){$('rtspStatus').textContent=`❌ ${e.message}`;toast(e.message,'error',5000);}
+}
+async function stopRtsp(){
+  const cid=+$('streamCamId').value;
+  await api(`/api/cameras/${cid}/rtsp/stop`,{method:'POST'});
+  $('rtspStatus').textContent='⏹ Đã dừng';toast('Dừng stream','success');setTimeout(loadCameras,400);
+}
+async function setVideoFile(){
+  const cid=+$('streamCamId').value,url=$('videoUrl').value.trim();
+  if(!url){toast('Nhập URL file','error');return;}
+  const cam=await api(`/api/cameras/${cid}`);
+  await api(`/api/cameras/${cid}`,{method:'PUT',body:{...cam,video_file:url}});
+  toast('Đã cấu hình','success');closeModal('modalStream');setTimeout(loadCameras,300);
+}
+async function resetToDemo(){
+  const cid=+$('streamCamId').value;
+  await api(`/api/cameras/${cid}/rtsp/stop`,{method:'POST'}).catch(()=>{});
+  const cam=await api(`/api/cameras/${cid}`);
+  await api(`/api/cameras/${cid}`,{method:'PUT',body:{...cam,video_file:null}}).catch(()=>{});
+  toast('Về animation demo','success');closeModal('modalStream');setTimeout(loadCameras,300);
+}
+
+// ── EVENTS ──
+async function loadEvents(){
+  const sev=$('evtFilter').value;
+  const evts=await api(`/api/events?limit=60${sev?'&severity='+sev:''}`);
+  const alerts=evts.filter(e=>e.severity==='warning'||e.severity==='error').length;
+  const b=$('alertBadge');if(alerts>0){b.style.display='';b.textContent=alerts;}else b.style.display='none';
+  $('evtList').innerHTML=evts.length?evts.map(e=>`
+    <div class="event-item">
+      <div class="event-dot ${sev2dot(e.severity)}"></div>
+      <span class="event-time">${(e.timestamp||'').substring(11,19)||'—'}</span>
+      <div style="flex:1">
+        <div class="event-msg">${esc(e.message)}</div>
+        <div class="event-rule">${[e.rule,e.source_ip?'src:'+e.source_ip:'',e.dest_ip?'dst:'+e.dest_ip:''].filter(Boolean).map(esc).join(' · ')}</div>
+      </div>
+      <span class="badge ${e.action==='deny'?'badge-red':e.action==='permit'?'badge-green':'badge-gray'}">${esc(e.action||e.type)}</span>
+    </div>`).join(''):'<p style="color:var(--text3);padding:8px">Không có sự kiện</p>';
+}
+async function clearEvents(){if(!confirm('Xóa toàn bộ log?'))return;await api('/api/events',{method:'DELETE'});toast('Đã xóa log','success');loadEvents();}
+
+// ── ACL ──
+async function loadACL(){
+  const rules=await api('/api/acl');
+  const groups={};rules.forEach(r=>{if(!groups[r.list_name])groups[r.list_name]=[];groups[r.list_name].push(r);});
+  $('aclBody').innerHTML=Object.entries(groups).map(([lst,rs])=>
+    rs.map((r,i)=>`<tr>
+      <td style="font-family:'Roboto Mono',monospace;font-size:12px">${r.rule_num}</td>
+      <td>${i===0?`<span class="badge badge-purple">${lst}</span>`:''}</td>
+      <td><span class="badge ${r.action==='permit'?'badge-green':'badge-red'}">${r.action.toUpperCase()}</span></td>
+      <td><span class="badge badge-navy">${r.protocol}</span></td>
+      <td style="font-family:'Roboto Mono',monospace;font-size:12px">${r.src_net||'any'}</td>
+      <td style="font-family:'Roboto Mono',monospace;font-size:12px">${r.dst_net||'any'}</td>
+      <td style="font-size:12px;color:var(--text2)">${r.description||'—'}</td>
+    </tr>`).join('')
+  ).join('');
+}
+async function simACL(){
+  const src=$('aclSrc').value.trim(),dst=$('aclDst').value.trim();
+  if(!src||!dst){toast('Nhập IP nguồn và đích','error');return;}
+  const r=await api('/api/acl/simulate',{method:'POST',body:{src_ip:src,dst_ip:dst}});
+  const box=$('aclResult');
+  box.className=`acl-result show ${r.action}`;
+  box.innerHTML=`<strong style="font-size:15px">${r.action==='permit'?'✅ PERMIT':'🚫 DENY'}</strong>
+    <div style="margin-top:6px">${r.message}</div>
+    <div style="margin-top:4px;font-size:12px;font-family:'Roboto Mono',monospace">${r.list} · ${r.rule}</div>`;
+}
+
+// ── CONFIG ──
+const CFGCACHE={};
+async function loadConfig(){
+  const dev=$('cfgDevice').value;
+  let cfg=CFGCACHE[dev];
+  if(!cfg){
+    try{const r=await api(`/api/config/${encodeURIComponent(dev)}`);cfg=r.config;CFGCACHE[dev]=cfg;}
+    catch(_){cfg='# Config không tìm thấy';}
+  }
+  const lines=cfg.split('\n').length;
+  $('cfgLabel').textContent=`${dev}  ·  ${lines} dòng`;
+  $('cfgPre').innerHTML=cfg.split('\n').map(line=>{
+    const t=line.trim();
+    if(t.startsWith('!')||t.startsWith('#'))return`<span class="cc">${esc(line)}</span>`;
+    const kws=['hostname','interface','ip','crypto','username','spanning-tree','vlan','router','access-list','line','aaa','ntp','no','shutdown','permit','deny','switchport','power','description','password','secret','duplex','speed'];
+    const first=t.split(' ')[0].toLowerCase();
+    if(kws.includes(first))return`<span class="ck">${esc(first)}</span><span class="cv">${esc(line.substring(line.toLowerCase().indexOf(first)+first.length))}</span>`;
+    return`<span>${esc(line)}</span>`;
+  }).join('\n');
+}
+function copyConfig(){navigator.clipboard.writeText($('cfgPre').textContent).then(()=>toast('Đã copy config','success'));}
+
+// ── REPORTS ──
+async function loadReports(){
+  const[bw,st,dhcp]=await Promise.all([api('/api/reports/bandwidth'),api('/api/reports/storage'),api('/api/reports/dhcp')]);
+  const bwRows=[['Camera (7 × 5 Mbps)','35 Mbps'],['Office (30 × 2 Mbps)','60 Mbps'],['Tổng cần','95 Mbps'],['Uplink Gigabit','1000 Mbps'],['Utilization','9.5%'],['Đề xuất','Gigabit đủ dự phòng']];
+  $('bwReport').innerHTML=bwRows.map(([k,v])=>`<div class="rep-row"><span class="rep-key">${k}</span><strong class="rep-val">${v}</strong></div>`).join('');
+  const stRows=[['Camera','7 camera'],['Bitrate/cam','5 Mbps (H.265+)'],['GB/cam/ngày 24/7','52.7 GB'],['Tổng/ngày (7 cams)','369 GB'],['30 ngày 24/7','~10.8 TB'],['Motion detection 30%','~3.24 TB/30 ngày'],['HDD đề xuất','2× Seagate SkyHawk 4TB'],['RAID','RAID-1 Mirror (4TB usable)'],['Lưu trữ ước tính','~14 ngày motion']];
+  $('stReport').innerHTML=stRows.map(([k,v])=>`<div class="rep-row"><span class="rep-key">${k}</span><strong class="rep-val">${v}</strong></div>`).join('');
+  $('dhcpBody').innerHTML=dhcp.map(l=>`<tr>
+    <td style="font-family:'Roboto Mono',monospace;font-size:12px">${l.ip}</td>
+    <td style="font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text3)">${l.mac||'—'}</td>
+    <td>${l.hostname||'—'}</td>
+    <td><span class="badge" style="background:${vlanBg(l.vlan)};color:${vlanTxt(l.vlan)};border-color:${vlanClr(l.vlan)}40">VLAN ${l.vlan}</span></td>
+  </tr>`).join('');
+}
+
+// ── TESTS ──
+const TR={
+  'TC-01':['pass','PC-01 nhận IP 192.168.10.100/24, GW=192.168.10.1, DNS=8.8.8.8 ✓'],
+  'TC-02':['pass','Ping 192.168.10.1: Sent=4 Received=4 Lost=0 avg RTT=1ms ✓'],
+  'TC-03':['pass','Ping 8.8.8.8: 4/4 RTT≈15ms, NAT 192.168.10.100→203.0.113.2 ✓'],
+  'TC-04':['pass','CAM-01 (192.168.20.11) ping NVR (192.168.20.10): 4/4 OK ✓'],
+  'TC-05':['pass','PC VLAN 10 ping 192.168.20.10: 100% loss, ACL rule 10 matches=4 ✓'],
+  'TC-06':['pass','Admin 192.168.30.10→NVR: 4/4, HTTP 200 giao diện web NVR ✓'],
+  'TC-07':['pass','Camera ping 8.8.8.8: 100% loss, ACL-VLAN20-OUT rule 50 deny ✓'],
+  'TC-08':['pass','Gi1/0/2 trunk VLANs 10,30,40 native 99; Gi1/0/3 VLANs 20,30 ✓'],
+  'TC-09':['pass','Fa0/5 port-security violation=1, status=restrict ✓'],
+  'TC-10':['pass','PoE 7 ports On, 7W/port, Total=49W (budget 370W, 13%) ✓'],
+  'TC-11':['pass','IKE SA: QM_IDLE, IPSec up, VPN client IP=10.10.10.1 ✓'],
+  'TC-12':['pass','VPN client ping NVR 4/4, HTTP 200, live view camera OK ✓'],
+};
+async function loadTests(){const t=await api('/api/tests');renderTests(t);}
+function renderTests(tests){
+  $('testBody').innerHTML=tests.map(t=>`<tr id="trow-${t.id}">
+    <td style="font-family:'Roboto Mono',monospace;font-size:12px;font-weight:700">${t.code}</td>
+    <td>${t.name}</td>
+    <td><span class="badge badge-navy">${t.category||'—'}</span></td>
+    <td style="font-size:11px;color:var(--text3);max-width:180px">${t.expected||'—'}</td>
+    <td id="ts-${t.id}">${statusBadge(t.status)}</td>
+    <td id="tr2-${t.id}" style="font-size:12px;color:${t.status==='pass'?'var(--green)':t.status==='fail'?'var(--red)':'var(--text3)'};max-width:220px">${t.last_result||'—'}</td>
+    <td><button class="btn btn-xs btn-primary" onclick="runTest(${t.id})">▶</button></td>
+  </tr>`).join('');
+}
+async function runTest(id){
+  $(`ts-${id}`).innerHTML='<span class="badge badge-orange">⏳ running</span>';
+  const t=await api(`/api/tests/${id}/run`,{method:'POST'});updateTestRow(t);
+}
+function updateTestRow(t){
+  const ts=$(`ts-${t.id}`),tr2=$(`tr2-${t.id}`);
+  if(ts)ts.innerHTML=statusBadge(t.status);
+  if(tr2){tr2.textContent=t.last_result||'—';tr2.style.color=t.status==='pass'?'var(--green)':t.status==='fail'?'var(--red)':'var(--text3)';}
+}
+async function runAllTests(){
+  toast('Đang chạy 12 test cases…','info',2000);
+  const tests=await api('/api/tests');
+  tests.forEach(t=>{const el=$(`ts-${t.id}`);if(el)el.innerHTML='<span class="badge badge-orange">⏳</span>';});
+  const results=await api('/api/tests/run-all',{method:'POST'});
+  results.forEach(updateTestRow);
+  const pass=results.filter(r=>r.status==='pass').length;
+  toast(`Kết quả: ${pass}/${results.length} PASS ✓`,'success',4000);
+}
+
+// ── MODAL ──
+function closeModal(id){$(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ── INIT ──
+connectWS();
+loadDashboard();
+loadConfig();
+</script>
+</body>
+</html>
